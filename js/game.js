@@ -1,281 +1,207 @@
 /**
- * SHEEP KOMBAT: SLINGSHOT MAYHEM
- * 2 Players - Sheep Warriors - Artillery Style
+ * SHEEP KOMBAT: THE SHOOTER
+ * P1: WASD + SPACE (Shoot)
+ * P2: Arrows + ENTER (Shoot)
  */
 
-class BootScene extends Phaser.Scene {
-    constructor() { super('BootScene'); }
+class Boot extends Phaser.Scene {
+    constructor() { super('Boot'); }
     preload() {
-        // Load sheep sprites from assets folder
         this.load.image('sheep1', 'assets/sheep1.png');
         this.load.image('sheep2', 'assets/sheep2.png');
+        this.load.image('heart', 'assets/heart.png');
+        this.load.image('gun', 'assets/gun.png');
 
-        // Generate other assets
         const graphics = this.make.graphics({ x: 0, y: 0, add: false });
-
-        // Ground block (Dark Stone)
         graphics.fillStyle(0x1a1a1b, 1);
-        graphics.fillRect(0, 0, 16, 16);
-        graphics.lineStyle(1, 0x444444, 0.8);
-        graphics.strokeRect(0, 0, 16, 16);
-        graphics.generateTexture('stone_block', 16, 16);
+        graphics.fillRect(0, 0, 32, 32);
+        graphics.lineStyle(1, 0x444444);
+        graphics.strokeRect(0, 0, 32, 32);
+        graphics.generateTexture('floor', 32, 32);
+
         graphics.clear();
-
-        // Projectile (Fireball)
-        graphics.fillStyle(0xff4500, 1);
-        graphics.fillCircle(8, 8, 8);
-        graphics.fillStyle(0xffff00, 0.6);
-        graphics.fillCircle(8, 8, 4);
-        graphics.generateTexture('fireball', 16, 16);
+        graphics.fillStyle(0xff0000, 1);
+        graphics.fillCircle(4, 4, 4);
+        graphics.generateTexture('bullet', 8, 8);
     }
-    create() {
-        this.scene.start('MenuScene');
-    }
+    create() { this.scene.start('Menu'); }
 }
 
-class MenuScene extends Phaser.Scene {
-    constructor() { super('MenuScene'); }
+class Menu extends Phaser.Scene {
+    constructor() { super('Menu'); }
     create() {
         const { width, height } = this.scale;
-
-        this.add.text(width / 2, 120, 'SHEEP KOMBAT', {
-            fontFamily: 'Metal Mania', fontSize: '90px', fill: '#8b0000',
-            stroke: '#000', strokeThickness: 8
+        this.add.text(width / 2, 150, 'SHEEP KOMBAT', {
+            fontFamily: 'Metal Mania', fontSize: '100px', fill: '#8b0000',
+            stroke: '#000', strokeThickness: 10
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, 220, 'SLINGSHOT MAYHEM', {
-            fontFamily: 'Shojumaru', fontSize: '24px', fill: '#d4af37'
+        const startBtn = this.add.rectangle(width / 2, 400, 300, 80, 0x8b0000).setInteractive({ useHandCursor: true });
+        this.add.text(width / 2, 400, 'START', {
+            fontFamily: 'Shojumaru', fontSize: '40px', fill: '#ffffff'
         }).setOrigin(0.5);
 
-        const startBtn = this.add.text(width / 2, 450, 'START KOMBAT', {
-            fontFamily: 'Metal Mania', fontSize: '48px', fill: '#ffffff',
-            backgroundColor: '#8b0000', padding: { x: 40, y: 20 }
-        })
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('GameScene'));
+        startBtn.on('pointerdown', () => this.scene.start('Play'));
 
-        // Decorative sheep
-        this.add.image(width / 2 - 200, 350, 'sheep1').setScale(2);
-        this.add.image(width / 2 + 200, 350, 'sheep2').setScale(2);
+        this.add.text(width / 2, 550, 'P1: WASD + SPACE | P2: ARROWS + ENTER', {
+            fontFamily: 'Arial', fontSize: '20px', fill: '#777'
+        }).setOrigin(0.5);
     }
 }
 
-class GameScene extends Phaser.Scene {
-    constructor() { super('GameScene'); }
+class Play extends Phaser.Scene {
+    constructor() { super('Play'); }
 
     create() {
         const { width, height } = this.scale;
 
-        // Physics
-        this.matter.world.setBounds(0, -500, width, height + 200);
-        this.matter.world.setGravity(0, 1.2);
+        // World
+        this.matter.world.setBounds(0, 0, width, height);
+        this.matter.world.setGravity(0, 1.5);
 
-        // Terrain
-        this.blocks = [];
-        this.generateArena();
+        // Solid Ground
+        const ground = this.matter.add.rectangle(width / 2, height - 20, width, 40, { isStatic: true });
+        this.add.tileSprite(width / 2, height - 20, width, 40, 'floor');
 
         // Players
-        this.players = [];
-        this.setupSheep();
+        this.p1 = this.createPlayer(200, height - 100, 'sheep1', 1);
+        this.p2 = this.createPlayer(width - 200, height - 100, 'sheep2', 2);
 
-        // State
-        this.currentPlayerIndex = 0;
-        this.isWaiting = false;
-        this.turnTimer = 15;
+        // HUD
+        this.createHUD(1);
+        this.createHUD(2);
 
-        // UI Elements
-        this.turnInfo = document.getElementById('turn-info');
-        this.p1HPText = document.getElementById('p1-hp');
-        this.p2HPText = document.getElementById('p2-hp');
+        // Keys
+        this.keys = this.input.keyboard.addKeys({
+            w: 'W', a: 'A', d: 'D', space: 'SPACE',
+            up: 'UP', left: 'LEFT', right: 'RIGHT', enter: 'ENTER'
+        });
 
         // Collisions
-        this.matter.world.on('collisionstart', (event) => {
-            event.pairs.forEach(pair => {
-                const labels = [pair.bodyA.label, pair.bodyB.label];
-                if (labels.includes('fireball')) {
-                    const fireballBody = pair.bodyA.label === 'fireball' ? pair.bodyA : pair.bodyB;
-                    if (fireballBody.gameObject) {
-                        this.handleImpact(fireballBody.gameObject.x, fireballBody.gameObject.y);
-                        fireballBody.gameObject.destroy();
+        this.matter.world.on('collisionstart', (e) => {
+            e.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+                if ((bodyA.label === 'bullet' && bodyB.label === 'player') || (bodyB.label === 'bullet' && bodyA.label === 'player')) {
+                    const bullet = bodyA.label === 'bullet' ? bodyA : bodyB;
+                    const playerBody = bodyA.label === 'player' ? bodyA : bodyB;
+                    if (bullet.gameObject && playerBody.gameObject !== bullet.owner) {
+                        this.hitPlayer(playerBody.gameObject);
+                        bullet.gameObject.destroy();
                     }
                 }
             });
         });
-
-        this.startTurn();
     }
 
-    generateArena() {
-        const { width, height } = this.scale;
-        const groundY = height - 120;
-        const blockSize = 16;
+    createPlayer(x, y, texture, id) {
+        const container = this.add.container(x, y);
+        const sprite = this.add.image(0, 0, texture).setScale(1.2);
+        const gun = this.add.image(20 * (id === 1 ? 1 : -1), 10, 'gun').setScale(0.8);
+        if (id === 2) sprite.setFlipX(true);
 
-        for (let x = blockSize / 2; x < width; x += blockSize) {
-            const h = Math.sin(x * 0.015) * 40 + groundY;
-            for (let y = h; y < height; y += blockSize) {
-                const block = this.matter.add.image(x, y, 'stone_block', null, {
-                    isStatic: true, label: 'terrain'
-                });
-                this.blocks.push(block);
-            }
+        container.add([sprite, gun]);
+        container.sprite = sprite;
+        container.id = id;
+        container.lives = 3;
+        container.bullets = 3;
+        container.canShoot = true;
+
+        this.matter.add.gameObject(container, {
+            shape: 'rectangle', width: 48, height: 48, friction: 0.1, restitution: 0, label: 'player'
+        });
+        container.setFixedRotation();
+
+        return container;
+    }
+
+    createHUD(playerId) {
+        const x = playerId === 1 ? 20 : this.scale.width - 200;
+        const color = playerId === 1 ? '#ff0000' : '#ffff00';
+
+        const label = this.add.text(x, 20, `SHEEP ${playerId}`, { fontFamily: 'Shojumaru', fontSize: '20px', fill: color });
+
+        const hearts = [];
+        for (let i = 0; i < 3; i++) {
+            hearts.push(this.add.image(x + 20 + i * 35, 60, 'heart').setScale(0.8));
         }
-    }
 
-    setupSheep() {
-        const { width } = this.scale;
-        const positions = [200, width - 200];
-        const textures = ['sheep1', 'sheep2'];
-        const colors = ['#ff0000', '#ffff00'];
+        const ammo = this.add.text(x, 90, `AMMO: 3`, { fontFamily: 'Arial', fontSize: '18px', fill: '#fff' });
 
-        for (let i = 0; i < 2; i++) {
-            const sheep = this.add.container(positions[i], 100);
-            const sprite = this.add.image(0, 0, textures[i]).setScale(1.2);
-            sheep.add(sprite);
-
-            this.matter.add.gameObject(sheep, {
-                shape: 'rectangle', width: 48, height: 48, friction: 0.1, label: 'sheep'
-            });
-
-            sheep.hp = 100;
-            sheep.team = i;
-            sheep.color = colors[i];
-            this.players.push(sheep);
-
-            // Interaction
-            sprite.setInteractive({ useHandCursor: true });
-            sprite.on('pointerdown', (p) => this.startDrag(p, sheep));
+        if (playerId === 1) {
+            this.p1HUD = { hearts, ammo };
+        } else {
+            this.p2HUD = { hearts, ammo };
         }
-    }
-
-    startDrag(pointer, sheep) {
-        if (this.isWaiting || this.players[this.currentPlayerIndex] !== sheep) return;
-
-        sheep.isDragging = true;
-        sheep.dragStartX = pointer.x;
-        sheep.dragStartY = pointer.y;
-
-        this.trajectory = this.add.graphics();
     }
 
     update() {
-        const pointer = this.input.activePointer;
-        const activeSheep = this.players[this.currentPlayerIndex];
+        // P1 Movement
+        if (this.keys.a.isDown) this.p1.setVelocityX(-5);
+        else if (this.keys.d.isDown) this.p1.setVelocityX(5);
+        else this.p1.setVelocityX(0);
 
-        if (activeSheep && activeSheep.isDragging) {
-            this.trajectory.clear();
-            this.trajectory.lineStyle(3, 0xffffff, 0.5);
-
-            const dx = activeSheep.dragStartX - pointer.x;
-            const dy = activeSheep.dragStartY - pointer.y;
-
-            // Draw slingshot line
-            this.trajectory.lineBetween(activeSheep.x, activeSheep.y, activeSheep.x + dx, activeSheep.y + dy);
-
-            if (!pointer.isDown) {
-                this.fire(activeSheep, dx, dy);
-            }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.w) && Math.abs(this.p1.body.velocity.y) < 0.1) {
+            this.p1.setVelocityY(-15);
         }
 
-        // Falling check
-        this.players.forEach(p => {
-            if (p.active && p.y > this.scale.height + 50) {
-                p.hp = 0;
-                this.checkGameOver();
-            }
-        });
-    }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.space)) this.shoot(this.p1);
 
-    fire(sheep, dx, dy) {
-        sheep.isDragging = false;
-        this.trajectory.destroy();
-        this.isWaiting = true;
+        // P2 Movement
+        if (this.keys.left.isDown) this.p2.setVelocityX(-5);
+        else if (this.keys.right.isDown) this.p2.setVelocityX(5);
+        else this.p2.setVelocityX(0);
 
-        const fireball = this.matter.add.image(sheep.x, sheep.y, 'fireball', null, {
-            shape: 'circle', radius: 8, label: 'fireball'
-        });
-
-        fireball.setVelocity(dx * 0.15, dy * 0.15);
-
-        // Fail-safe to next turn if fireball gets lost
-        this.time.delayedCall(4000, () => {
-            if (this.isWaiting) this.nextTurn();
-        });
-    }
-
-    handleImpact(x, y) {
-        const radius = 60;
-
-        // Destroy Terrain
-        for (let i = this.blocks.length - 1; i >= 0; i--) {
-            const b = this.blocks[i];
-            if (Phaser.Math.Distance.Between(x, y, b.x, b.y) < radius) {
-                b.destroy();
-                this.blocks.splice(i, 1);
-            }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.up) && Math.abs(this.p2.body.velocity.y) < 0.1) {
+            this.p2.setVelocityY(-15);
         }
 
-        // Damage Players
-        this.players.forEach(p => {
-            if (!p.active) return;
-            const dist = Phaser.Math.Distance.Between(x, y, p.x, p.y);
-            if (dist < radius) {
-                const damage = Math.floor(35 * (1 - dist / radius));
-                p.hp -= damage;
-                if (p.hp < 0) p.hp = 0;
-                this.updateUI();
-
-                // Knockback
-                const angle = Phaser.Math.Angle.Between(x, y, p.x, p.y);
-                p.applyForce({ x: Math.cos(angle) * 0.08, y: Math.sin(angle) * 0.08 });
-            }
-        });
-
-        // Effect
-        const flash = this.add.circle(x, y, radius, 0xff8800, 0.6);
-        this.tweens.add({
-            targets: flash,
-            scale: 1.5,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-                flash.destroy();
-                this.nextTurn();
-            }
-        });
+        if (Phaser.Input.Keyboard.JustDown(this.keys.enter)) this.shoot(this.p2);
     }
 
-    updateUI() {
-        this.p1HPText.innerText = `SHEEP 1: ${this.players[0].hp}`;
-        this.p2HPText = document.getElementById('p2-hp');
-        this.p2HPText.innerText = `SHEEP 2: ${this.players[1].hp}`;
-        this.checkGameOver();
+    shoot(player) {
+        if (player.bullets <= 0 || !player.canShoot) return;
+
+        player.canShoot = false;
+        player.bullets--;
+
+        const hud = player.id === 1 ? this.p1HUD : this.p2HUD;
+        hud.ammo.setText(`AMMO: ${player.bullets}`);
+
+        const dir = player.id === 1 ? 1 : -1;
+        const b = this.matter.add.image(player.x + (30 * dir), player.y, 'bullet', null, {
+            ignoreGravity: true, label: 'bullet'
+        });
+        b.owner = player;
+        b.setVelocityX(15 * dir);
+
+        this.time.delayedCall(500, () => player.canShoot = true);
     }
 
-    checkGameOver() {
-        if (this.players[0].hp <= 0 || this.players[1].hp <= 0) {
-            this.isWaiting = true;
-            const winner = this.players[0].hp > 0 ? 'SHEEP 1' : 'SHEEP 2';
+    hitPlayer(player) {
+        player.lives--;
+        const hud = player.id === 1 ? this.p1HUD : this.p2HUD;
+        if (hud.hearts[player.lives]) {
+            this.tweens.add({
+                targets: hud.hearts[player.lives],
+                scale: 0,
+                duration: 200,
+                onComplete: () => hud.hearts[player.lives].setVisible(false)
+            });
+        }
 
-            this.add.text(this.scale.width / 2, this.scale.height / 2, winner + '\nFATALITY', {
-                fontFamily: 'Metal Mania', fontSize: '96px', fill: '#ff0000', align: 'center'
-            }).setOrigin(0.5);
-
-            this.time.delayedCall(3000, () => this.scene.restart());
+        if (player.lives <= 0) {
+            this.gameOver(player.id === 1 ? 2 : 1);
         }
     }
 
-    startTurn() {
-        this.isWaiting = false;
-        this.turnTimer = 15;
-        this.turnInfo.innerText = `SHEEP ${this.currentPlayerIndex + 1}'S KOMBAT`;
-        this.turnInfo.style.color = this.players[this.currentPlayerIndex].color;
-    }
+    gameOver(winnerId) {
+        this.scene.pause();
+        const { width, height } = this.scale;
+        this.add.text(width / 2, height / 2, `SHEEP ${winnerId} WINS!\nFATALITY`, {
+            fontFamily: 'Metal Mania', fontSize: '80px', fill: '#ff0000', align: 'center'
+        }).setOrigin(0.5);
 
-    nextTurn() {
-        if (this.players[0].hp <= 0 || this.players[1].hp <= 0) return;
-        this.currentPlayerIndex = 1 - this.currentPlayerIndex;
-        this.startTurn();
+        this.time.delayedCall(3000, () => this.scene.restart('Menu'));
     }
 }
 
@@ -283,13 +209,13 @@ const config = {
     type: Phaser.AUTO,
     width: 1024,
     height: 600,
-    parent: 'phaser-app',
-    backgroundColor: '#050505',
+    parent: 'phaser-container',
+    backgroundColor: '#0a0a0c',
     physics: {
         default: 'matter',
         matter: { gravity: { y: 1 }, debug: false }
     },
-    scene: [BootScene, MenuScene, GameScene]
+    scene: [Boot, Menu, Play]
 };
 
 const game = new Phaser.Game(config);

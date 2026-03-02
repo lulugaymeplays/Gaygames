@@ -9,71 +9,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Shojumaru&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --blood: #8b0000;
-            --gold: #d4af37;
-            --bg: #050505;
-        }
-
         body {
             margin: 0;
             padding: 0;
-            background-color: var(--bg);
+            background-color: #050505;
             color: white;
-            font-family: 'Metal Mania', cursive;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             overflow: hidden;
+            font-family: Arial, sans-serif;
         }
 
-        #game-container {
-            border: 6px solid #1a1a1b;
+        #phaser-container {
+            border: 4px solid #1a1a1b;
             box-shadow: 0 0 50px rgba(139, 0, 0, 0.7);
-            position: relative;
-            background: #000;
-        }
-
-        .ui-label {
-            position: absolute;
-            font-family: 'Shojumaru', cursive;
-            font-size: 20px;
-            color: var(--gold);
-            text-shadow: 2px 2px #000;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        #turn-info {
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 32px;
-        }
-
-        #p1-hp {
-            top: 20px;
-            left: 20px;
-            color: #ff0000;
-        }
-
-        #p2-hp {
-            top: 20px;
-            right: 20px;
-            color: #ffff00;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 
 <body>
-    <div id="game-container">
-        <div id="turn-info" class="ui-label">READY?</div>
-        <div id="p1-hp" class="ui-label">SHEEP 1: 100</div>
-        <div id="p2-hp" class="ui-label">SHEEP 2: 100</div>
-        <div id="phaser-app"></div>
-    </div>
+    <div id="phaser-container"></div>
     <script src="js/game.js"></script>
 </body>
 
