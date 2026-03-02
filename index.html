@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KOMBAT SLINGSHOT | MAYHEM</title>
+    <title>SHEEP KOMBAT | SHOOTER</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Shojumaru&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #8b0000;
+            --blood: #8b0000;
             --gold: #d4af37;
             --bg: #050505;
         }
@@ -28,43 +28,52 @@
             overflow: hidden;
         }
 
-        #game-wrapper {
-            border: 4px solid #333;
-            box-shadow: 0 0 30px rgba(139, 0, 0, 0.5);
+        #game-container {
+            border: 6px solid #1a1a1b;
+            box-shadow: 0 0 50px rgba(139, 0, 0, 0.7);
             position: relative;
+            background: #000;
         }
 
-        #ui-overlay {
+        .ui-label {
             position: absolute;
-            top: 10px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 20px;
+            font-family: 'Shojumaru', cursive;
+            font-size: 20px;
+            color: var(--gold);
+            text-shadow: 2px 2px #000;
+            z-index: 10;
             pointer-events: none;
-            box-sizing: border-box;
-            z-index: 100;
         }
 
-        .hud-text {
-            font-size: 24px;
-            color: var(--gold);
-            text-shadow: 2px 2px 0px #000;
+        #turn-info {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+        }
+
+        #p1-hp {
+            top: 20px;
+            left: 20px;
+            color: #ff0000;
+        }
+
+        #p2-hp {
+            top: 20px;
+            right: 20px;
+            color: #ffff00;
         }
     </style>
-    <!-- Phaser 3 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 
 <body>
-    <div id="game-wrapper">
-        <div id="ui-overlay">
-            <div id="turn-indicator" class="hud-text">PREPARING...</div>
-            <div id="timer" class="hud-text">15s</div>
-        </div>
-        <div id="phaser-game"></div>
+    <div id="game-container">
+        <div id="turn-info" class="ui-label">READY?</div>
+        <div id="p1-hp" class="ui-label">SHEEP 1: 100</div>
+        <div id="p2-hp" class="ui-label">SHEEP 2: 100</div>
+        <div id="phaser-app"></div>
     </div>
-    <!-- Single game file to avoid module/CORS issues -->
     <script src="js/game.js"></script>
 </body>
 
