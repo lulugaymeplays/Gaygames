@@ -7,7 +7,7 @@ export class GameScene extends Phaser.Scene {
     create() {
         this.width = this.cameras.main.width;
         this.height = this.cameras.main.height;
-        this.add.image(this.width / 2, this.height / 2, 'sky').setDisplaySize(this.width, this.height).setAlpha(0.3);
+        this.add.image(this.width / 2, this.height / 2, 'kombat_bg').setDisplaySize(this.width, this.height).setAlpha(0.2);
 
         this.terrain = new TerrainManager(this);
         this.terrain.generate();
@@ -22,8 +22,10 @@ export class GameScene extends Phaser.Scene {
         this.setupPhysics();
 
         this.levelText = this.add.text(this.width / 2, this.height / 2, `LEVEL ${this.game.settings.currentLevel}`, {
-            font: '48px Orbitron',
-            fill: '#ffffff'
+            font: '64px "Metal Mania"',
+            fill: '#8b0000',
+            stroke: '#000',
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         this.time.delayedCall(2000, () => {
@@ -43,8 +45,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupHUD() {
-        this.hudText = this.add.text(this.width / 2, 30, 'PREPARING...', { font: '24px Orbitron', fill: '#ffffff' }).setOrigin(0.5);
-        this.timerText = this.add.text(this.width - 50, 30, '15s', { font: '24px Orbitron', fill: '#ff3e00' }).setOrigin(0.5);
+        this.hudText = this.add.text(this.width / 2, 30, 'PREPARING...', { font: '28px "Metal Mania"', fill: '#ffffff' }).setOrigin(0.5);
+        this.timerText = this.add.text(this.width - 50, 30, '15s', { font: '28px "Shojumaru"', fill: '#ff0000' }).setOrigin(0.5);
 
         this.time.addEvent({
             delay: 1000,
@@ -141,8 +143,10 @@ export class GameScene extends Phaser.Scene {
         const winner = winnerTeam !== undefined ? `PLAYER ${winnerTeam + 1} WINS!` : 'DRAW!';
 
         this.add.text(this.width / 2, this.height / 2 - 50, winner, {
-            font: '48px Orbitron',
-            fill: '#00ff00'
+            font: '64px "Metal Mania"',
+            fill: '#00ff00',
+            stroke: '#000',
+            strokeThickness: 5
         }).setOrigin(0.5);
 
         this.game.settings.currentLevel++;
