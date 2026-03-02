@@ -21,7 +21,15 @@ export class GameScene extends Phaser.Scene {
         this.setupHUD();
         this.setupPhysics();
 
-        this.time.delayedCall(1000, () => this.startNextTurn());
+        this.levelText = this.add.text(this.width / 2, this.height / 2, `LEVEL ${this.game.settings.currentLevel}`, {
+            font: '48px Orbitron',
+            fill: '#ffffff'
+        }).setOrigin(0.5);
+
+        this.time.delayedCall(2000, () => {
+            this.levelText.destroy();
+            this.startNextTurn();
+        });
     }
 
     setupMultiplayer() {
@@ -112,6 +120,35 @@ export class GameScene extends Phaser.Scene {
     update() {
         this.players.forEach(p => {
             if (p.active && p.y > this.height + 50) p.die();
+        });
+
+        this.checkWinCondition();
+    }
+
+    checkWinCondition() {
+        if (!this.isTurnActive) return;
+
+        const alivePlayers = this.players.filter(p => p.active);
+        const aliveTeams = [...new Set(alivePlayers.map(p => p.team))];
+
+        if (aliveTeams.length <= 1 && this.players.length > 0) {
+            this.handleMatchEnd(aliveTeams[0]);
+        }
+    }
+
+    handleMatchEnd(winnerTeam) {
+        this.isTurnActive = false;
+        const winner = winnerTeam !== undefined ? `PLAYER ${winnerTeam + 1} WINS!` : 'DRAW!';
+
+        this.add.text(this.width / 2, this.height / 2 - 50, winner, {
+            font: '48px Orbitron',
+            fill: '#00ff00'
+        }).setOrigin(0.5);
+
+        this.game.settings.currentLevel++;
+
+        this.time.delayedCall(3000, () => {
+            this.scene.restart();
         });
     }
 }

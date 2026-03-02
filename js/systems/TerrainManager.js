@@ -8,10 +8,15 @@ export class TerrainManager {
     generate() {
         const width = this.scene.cameras.main.width;
         const height = this.scene.cameras.main.height;
+        const level = this.scene.game.settings.currentLevel;
         const groundLevel = height - 100;
 
+        // Level increases terrain complexity
+        const frequency = 0.01 + (level * 0.005);
+        const amplitude = 40 + (level * 10);
+
         for (let x = 0; x < width; x += this.blockSize) {
-            const h = Math.sin(x * 0.01) * 50 + groundLevel;
+            const h = Math.sin(x * frequency) * amplitude + groundLevel;
             for (let y = h; y < height; y += this.blockSize) {
                 const block = this.scene.matter.add.image(x + this.blockSize / 2, y + this.blockSize / 2, 'ground', null, {
                     isStatic: true, label: 'terrain'

@@ -24,5 +24,6 @@ const game = new Phaser.Game(config);
 game.settings = {
     playerCount: 2,
     charsPerTeam: 2,
-    turnTime: 15
+    turnTime: 15,
+    currentLevel: 1
 };
