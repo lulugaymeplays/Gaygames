@@ -1,9 +1,8 @@
 /**
- * SHEEP BRAWL - FINAL ROBUST VERSION
- * Real-time combat between two playable sheep.
+ * SHEEP BRAWL - ZERO ASSET VERSION (EXTREMELY ROBUST)
+ * No external images, no loading hangs.
  */
 
-// --- SHARED SYSTEMS ---
 class TerrainManager {
     constructor(scene) {
         this.scene = scene;
@@ -17,7 +16,7 @@ class TerrainManager {
         const groundLevel = height - 120;
 
         for (let x = 0; x < width; x += this.blockSize) {
-            const h = Math.sin(x * 0.01) * 50 + groundLevel;
+            const h = Math.sin(x * 0.01) * 40 + groundLevel;
             for (let y = h; y < height; y += this.blockSize) {
                 const block = this.scene.matter.add.image(x + this.blockSize / 2, y + this.blockSize / 2, 'ground', null, {
                     isStatic: true, label: 'terrain', friction: 0.9, restitution: 0
@@ -42,7 +41,6 @@ class TerrainManager {
     }
 }
 
-// --- ENTITIES ---
 class Player extends Phaser.GameObjects.Container {
     constructor(scene, x, y, id, color) {
         super(scene, x, y);
@@ -63,10 +61,11 @@ class Player extends Phaser.GameObjects.Container {
         this.add(this.hpBar);
 
         scene.add.existing(this);
-        this.physicsBody = scene.matter.add.gameObject(this, {
+        const body = scene.matter.add.gameObject(this, {
             shape: 'rectangle', width: 32, height: 28, friction: 0.05, label: 'player'
         });
-        this.physicsBody.setFixedRotation();
+        body.setFixedRotation();
+        this.physicsBody = body;
 
         this.setupControls();
     }
@@ -126,24 +125,29 @@ class Player extends Phaser.GameObjects.Container {
     }
 }
 
-// --- SCENES ---
 class BootScene extends Phaser.Scene {
     constructor() { super('BootScene'); }
     preload() {
-        this.load.setBaseURL('https://labs.phaser.io/assets/');
-        this.load.image('particle', 'particles/white-flare.png');
+        // NO EXTERNAL LOADS HERE TO PREVENT HANGS
     }
     create() {
         const g = this.add.graphics();
-        // Sheep
+        // 🐑 Sheep Texture
         g.fillStyle(0xffffff).fillCircle(16, 16, 12).fillCircle(8, 14, 8).fillCircle(24, 14, 8).fillCircle(16, 8, 8);
         g.fillStyle(0x000000).fillRect(10, 24, 3, 6).fillRect(19, 24, 3, 6).fillEllipse(28, 12, 10, 12);
-        g.fillStyle(0xffffff).fillCircle(30, 10, 2);
+        g.fillStyle(0xff0000).fillCircle(30, 9, 2); // Black cap head + red eye
         g.generateTexture('sheep', 40, 32); g.clear();
-        // Bullet
+
+        // 🧶 Bullet Texture
         g.fillStyle(0xffffff).fillCircle(8, 8, 6).generateTexture('wool-ball', 16, 16); g.clear();
-        // Ground
-        g.fillStyle(0x33aa33).fillRect(0, 0, 16, 4).fillStyle(0x664422).fillRect(0, 4, 16, 12).generateTexture('ground', 16, 16);
+
+        // 🟩 Ground Texture
+        g.fillStyle(0x33aa33).fillRect(0, 0, 16, 4).fillStyle(0x664422).fillRect(0, 4, 16, 12).generateTexture('ground', 16, 16); g.clear();
+
+        // ✨ Particle Texture
+        g.fillStyle(0xffffff).fillCircle(4, 4, 4).generateTexture('particle', 8, 8);
+
+        console.log("Assets Gerados Offline. Indo para o Menu.");
         this.scene.start('MenuScene');
     }
 }
@@ -153,17 +157,20 @@ class MenuScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
         this.add.graphics().fillGradientStyle(0x0a0a20, 0x0a0a20, 0, 0, 1).fillRect(0, 0, width, height);
-        this.add.text(width / 2, 120, 'SHEEP BRAWL', { font: 'bold 80px Orbitron', fill: '#fff' }).setOrigin(0.5);
+        this.add.text(width / 2, 150, 'SHEEP BRAWL', { font: 'bold 80px Arial', fill: '#fff' }).setOrigin(0.5);
 
-        const btn = this.add.text(width / 2, 350, 'START GAME', {
-            font: '40px Orbitron', fill: '#fff', backgroundColor: '#ff3e00', padding: 20
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        const btnBox = this.add.rectangle(width / 2, 350, 300, 80, 0xff3e00).setInteractive({ useHandCursor: true });
+        this.add.text(width / 2, 350, 'START GAME', { font: 'bold 32px Arial', fill: '#fff' }).setOrigin(0.5);
 
-        btn.on('pointerdown', () => this.scene.start('GameScene'));
-        btn.on('pointerover', () => btn.setBackgroundColor('#ff5722'));
-        btn.on('pointerout', () => btn.setBackgroundColor('#ff3e00'));
+        btnBox.on('pointerdown', () => {
+            console.log("Botão clicado! Iniciando Jogo...");
+            this.scene.start('GameScene');
+        });
 
-        this.add.text(width / 2, 500, 'P1: WASD + SPACE | P2: SETAS + 0', { font: '20px Orbitron', fill: '#888' }).setOrigin(0.5);
+        btnBox.on('pointerover', () => btnBox.setFillStyle(0xff5722));
+        btnBox.on('pointerout', () => btnBox.setFillStyle(0xff3e00));
+
+        this.add.text(width / 2, 500, 'P1: WASD + SPACE | P2: SETAS + 0', { font: '20px Arial', fill: '#888' }).setOrigin(0.5);
     }
 }
 
@@ -171,38 +178,62 @@ class GameScene extends Phaser.Scene {
     constructor() { super('GameScene'); }
     create() {
         const { width, height } = this.scale;
+        this.add.graphics().fillGradientStyle(0x0a0a20, 0x0a0a20, 0, 0, 1).fillRect(0, 0, width, height);
+
         this.terrain = new TerrainManager(this);
         this.terrain.generate();
-        this.players = [new Player(this, 200, 50, 0, 0x00d4ff), new Player(this, width - 200, 50, 1, 0xff3e00)];
+
+        this.players = [
+            new Player(this, 200, 50, 0, 0x00d4ff),
+            new Player(this, width - 200, 50, 1, 0xff3e00)
+        ];
+
         this.gameOver = false;
+
+        // Physics collisions
         this.matter.world.on('collisionstart', (e) => {
             e.pairs.forEach(p => {
-                const b = p.bodyA.label === 'projectile' ? p.bodyA : (p.bodyB.label === 'projectile' ? p.bodyB : null);
-                if (b && b.gameObject) { this.handleExplosion(b.gameObject.x, b.gameObject.y, 50); b.gameObject.destroy(); }
+                const b = p.bodyA.label === 'projectile' ? p.bodyA.gameObject : (p.bodyB.label === 'projectile' ? p.bodyB.gameObject : null);
+                if (b && b.active) {
+                    this.handleExplosion(b.x, b.y, 50);
+                    b.destroy();
+                }
             });
         });
     }
 
     launchProjectile(x, y, vx, vy, ownerId) {
         const p = this.matter.add.image(x, y, 'wool-ball', null, { shape: 'circle', radius: 6, label: 'projectile' });
-        p.setVelocity(vx, vy); p.setTint(ownerId === 0 ? 0x00d4ff : 0xff3e00);
+        p.setVelocity(vx, vy);
+        p.setTint(ownerId === 0 ? 0x00d4ff : 0xff3e00);
     }
 
     handleExplosion(x, y, radius) {
         this.terrain.explode(x, y, radius);
         this.cameras.main.shake(150, 0.005);
         this.players.forEach(p => {
-            if (p.alive && Phaser.Math.Distance.Between(x, y, p.x, p.y) < radius) p.takeDamage(25);
+            if (p.alive && Phaser.Math.Distance.Between(x, y, p.x, p.y) < radius) p.takeDamage(20);
         });
+
+        // Explosion visual
+        const emit = this.add.particles(x, y, 'particle', {
+            speed: { min: 40, max: 200 },
+            scale: { start: 1, end: 0 },
+            lifespan: 600,
+            quantity: 15,
+            tint: 0xaaaaaa
+        });
+        this.time.delayedCall(600, () => emit.destroy());
     }
 
     update() {
         if (this.gameOver) return;
         this.players.forEach(p => p.update());
+
         const alive = this.players.filter(p => p.alive);
         if (alive.length <= 1) {
             this.gameOver = true;
-            this.add.text(512, 300, 'FIM DE JOGO', { font: '80px Orbitron', fill: '#fff' }).setOrigin(0.5);
+            this.add.text(512, 300, 'FIM DE JOGO!', { font: 'bold 64px Arial', fill: '#fff' }).setOrigin(0.5);
             this.time.delayedCall(3000, () => this.scene.start('MenuScene'));
         }
     }
@@ -210,7 +241,11 @@ class GameScene extends Phaser.Scene {
 
 const config = {
     type: Phaser.AUTO, width: 1024, height: 600, parent: 'game-container',
-    physics: { default: 'matter', matter: { gravity: { y: 1 }, debug: false } },
+    backgroundColor: '#000000',
+    physics: { default: 'matter', matter: { gravity: { y: 1.2 }, debug: false } },
     scene: [BootScene, MenuScene, GameScene]
 };
+
+// Start the game
 new Phaser.Game(config);
+console.log("Jogo Reiniciado em Modo Offline (Zero Assets Externos).");
