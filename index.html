@@ -3,20 +3,180 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sheep Brawl | Batalha de Ovelhas</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=Orbitron:wght@400;700&display=swap"
-        rel="stylesheet">
+    <title>SHEEP MAYHEM - COMPLETO</title>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #050510;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+        }
+    </style>
 </head>
 
 <body>
     <div id="game-container"></div>
-    <!-- Single entry point script -->
-    <script src="js/app.js"></script>
+
+    <script>
+        // --- LÓGICA DO JOGO (TUDO EM UM ARQUIVO) ---
+
+        class Boot extends Phaser.Scene {
+            constructor() { super('Boot'); }
+            create() {
+                const g = this.add.graphics();
+                // 🐑 Textura Ovelha
+                g.fillStyle(0xffffff).fillCircle(16, 16, 12).fillCircle(8, 14, 8).fillCircle(24, 14, 8).fillCircle(16, 8, 8);
+                g.fillStyle(0x000000).fillRect(10, 24, 3, 6).fillRect(19, 24, 3, 6).fillEllipse(28, 12, 10, 12);
+                g.fillStyle(0xff0000).fillCircle(30, 9, 2);
+                g.generateTexture('sheep', 40, 32); g.clear();
+                // 🧶 Bala
+                g.fillStyle(0xffffff).fillCircle(8, 8, 6).generateTexture('bullet', 16, 16); g.clear();
+                // 🟩 Chão
+                g.fillStyle(0x33aa33).fillRect(0, 0, 32, 8).fillStyle(0x664422).fillRect(0, 8, 32, 24);
+                g.generateTexture('ground', 32, 32); g.clear();
+                // ✨ Partícula
+                g.fillStyle(0xffffff).fillCircle(4, 4, 4).generateTexture('particle', 8, 8);
+
+                this.scene.start('Menu');
+            }
+        }
+
+        class Menu extends Phaser.Scene {
+            constructor() { super('Menu'); }
+            create() {
+                const { width, height } = this.scale;
+                this.add.text(width / 2, 150, 'SHEEP MAYHEM', { fontSize: '80px', fontWeight: 'bold', fill: '#fff' }).setOrigin(0.5);
+
+                const btn = this.add.rectangle(width / 2, 350, 300, 80, 0xff3e00).setInteractive({ useHandCursor: true });
+                this.add.text(width / 2, 350, 'START GAME', { fontSize: '32px', fontWeight: 'bold' }).setOrigin(0.5);
+
+                btn.on('pointerdown', () => this.scene.start('Play'));
+
+                this.add.text(width / 2, 500, 'P1: WASAD + ESPAÇO | P2: SETAS + 0', { fontSize: '20px', fill: '#888' }).setOrigin(0.5);
+            }
+        }
+
+        class Play extends Phaser.Scene {
+            constructor() { super('Play'); }
+            create() {
+                const { width, height } = this.scale;
+                this.matter.world.setBounds(0, 0, width, height + 200);
+
+                // Chão Firme
+                for (let i = 0; i < width; i += 32) {
+                    this.matter.add.image(i + 16, height - 50, 'ground', null, { isStatic: true, friction: 0.1 });
+                }
+
+                // Jogadores
+                this.p1 = this.createPlayer(200, 100, 0, 0x00d4ff);
+                this.p2 = this.createPlayer(width - 200, 100, 1, 0xff3e00);
+                this.players = [this.p1, this.p2];
+
+                this.gameOver = false;
+                this.keys = this.input.keyboard.addKeys({
+                    W: 'W', A: 'A', D: 'D', S: 'S', SPACE: 'SPACE',
+                    UP: 'UP', LEFT: 'LEFT', RIGHT: 'RIGHT', ZERO: 'ZERO', NUM0: 'NUMPAD_ZERO'
+                });
+
+                // Colisões
+                this.matter.world.on('collisionstart', (e) => {
+                    e.pairs.forEach(pair => {
+                        const bA = pair.bodyA; const bB = pair.bodyB;
+                        if (bA.label === 'bullet' || bB.label === 'bullet') {
+                            const b = bA.label === 'bullet' ? bA.gameObject : bB.gameObject;
+                            if (b) { this.explode(b.x, b.y); b.destroy(); }
+                        }
+                    });
+                });
+            }
+
+            createPlayer(x, y, id, color) {
+                const container = this.add.container(x, y);
+                const sprite = this.add.sprite(0, 0, 'sheep').setTint(color);
+                if (id === 1) sprite.setFlipX(true);
+
+                const hpText = this.add.text(0, -40, '100', { fontSize: '16px' }).setOrigin(0.5);
+                container.add([sprite, hpText]);
+
+                this.matter.add.gameObject(container, { shape: 'rectangle', width: 32, height: 32, friction: 0.05 });
+                container.setFixedRotation();
+                container.hp = 100; container.id = id; container.lastShot = 0; container.hpText = hpText;
+                return container;
+            }
+
+            update() {
+                if (this.gameOver) return;
+
+                // P1 Controls
+                if (this.keys.A.isDown) this.p1.setVelocityX(-5);
+                else if (this.keys.D.isDown) this.p1.setVelocityX(5);
+                else this.p1.setVelocityX(0);
+                if (Phaser.Input.Keyboard.JustDown(this.keys.W) && Math.abs(this.p1.body.velocity.y) < 0.2) this.p1.setVelocityY(-10);
+                if (this.keys.SPACE.isDown) this.shoot(this.p1);
+
+                // P2 Controls
+                if (this.keys.LEFT.isDown) this.p2.setVelocityX(-5);
+                else if (this.keys.RIGHT.isDown) this.p2.setVelocityX(5);
+                else this.p2.setVelocityX(0);
+                if (Phaser.Input.Keyboard.JustDown(this.keys.UP) && Math.abs(this.p2.body.velocity.y) < 0.2) this.p2.setVelocityY(-10);
+                if (this.keys.ZERO.isDown || this.keys.NUM0.isDown) this.shoot(this.p2);
+
+                this.players.forEach(p => {
+                    if (p.y > 650) this.endGame(p.id === 0 ? 2 : 1);
+                });
+            }
+
+            shoot(p) {
+                const now = this.time.now;
+                if (now - p.lastShot < 400) return;
+                p.lastShot = now;
+                const dir = p.id === 0 ? 1 : -1;
+                const bullet = this.matter.add.image(p.x + (dir * 30), p.y, 'bullet', null, { label: 'bullet', ignoreGravity: true });
+                bullet.setVelocityX(dir * 10);
+                bullet.setTint(p.id === 0 ? 0x00d4ff : 0xff3e00);
+            }
+
+            explode(x, y) {
+                this.cameras.main.shake(100, 0.005);
+                this.players.forEach(p => {
+                    if (Phaser.Math.Distance.Between(x, y, p.x, p.y) < 60) {
+                        p.hp -= 10;
+                        p.hpText.setText(p.hp);
+                        if (p.hp <= 0) this.endGame(p.id === 0 ? 2 : 1);
+                    }
+                });
+            }
+
+            endGame(winnerId) {
+                if (this.gameOver) return;
+                this.gameOver = true;
+                this.add.text(512, 300, `JOGADOR ${winnerId} VENCEU!`, { fontSize: '64px', fill: '#fff' }).setOrigin(0.5);
+                this.time.delayedCall(3000, () => this.scene.start('Menu'));
+            }
+        }
+
+        // --- CONFIGURAÇÃO ---
+        const config = {
+            type: Phaser.AUTO,
+            width: 1024,
+            height: 600,
+            parent: 'game-container',
+            physics: { default: 'matter', matter: { gravity: { y: 1 } } },
+            scene: [Boot, Menu, Play]
+        };
+        new Phaser.Game(config);
+    </script>
 </body>
 
 </html>
