@@ -21,10 +21,14 @@ const config = {
     antialias: true
 };
 
+// Create game instance
 const game = new Phaser.Game(config);
 
+// Globally available settings
 game.settings = {
     playerCount: 2,
     charsPerTeam: 2,
     turnTime: 15
 };
+
+console.log("Game initialized with settings:", game.settings);

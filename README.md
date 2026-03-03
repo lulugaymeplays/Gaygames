@@ -1,24 +1,30 @@
-# Sheep Mayhem
+# 🐑 Sheep Mayhem!
 
-Jogo de duelo entre ovelhas com física destrutível.
+Um jogo de duelo estratégico onde ovelhas se enfrentam em um ambiente totalmente destrutível.
 
-## Como Jogar
+## 🚀 Como Executar (Importante!)
 
-Como o jogo utiliza módulos JavaScript modernos, ele precisa ser servido por um servidor local para funcionar corretamente no seu navegador. Escolha um dos métodos abaixo:
+Este jogo usa **Módulos JavaScript modernos**. Por razões de segurança, os navegadores não permitem que esses módulos sejam carregados diretamente de um arquivo local (`file://`). 
 
-### Opção A: Usando Node.js (Recomendado)
-Se você tem Node.js instalado, abra o terminal na pasta do jogo e execute:
-`npx serve .`
-Depois, abra `http://localhost:3000` no seu navegador.
+**O jogo NÃO funcionará se você apenas clicar duas vezes no `index.html`.**
 
-### Opção B: Usando Python
-Se você tem Python instalado, execute:
-`python -m http.server 8000`
-Depois, abra `http://localhost:8000` no seu navegador.
+### Maneira mais fácil:
+Se você usa o **VS Code**, instale a extensão **"Live Server"**, clique com o botão direito no `index.html` e selecione **"Open with Live Server"**.
 
-### Opção C: Extensão do VS Code
-Se você usa VS Code, instale a extensão "Live Server", clique com o botão direito no `index.html` e selecione "Open with Live Server".
+### Outras maneiras (usando terminal):
+Abra o prompt de comando ou terminal na pasta `Documents\Gaygames` e use um destes comandos:
 
-## Controles
-- **Mouse**: Clique e arraste na sua ovelha (como um estilingue) para mirar e solte para atirar uma bola de lã.
-- O objetivo é zerar a vida da outra ovelha ou derrubá-la do terreno.
+- **Node.js**: `npx serve .` (depois abra `localhost:3000`)
+- **Python**: `python -m http.server 8000` (depois abra `localhost:8000`)
+
+---
+
+## 🎮 Controles
+- **Mouse (Mira)**: Clique e arraste na sua ovelha para trás (efeito estilingue) para mirar.
+- **Mouse (Atirar)**: Solte o botão para disparar uma bola de lã potente.
+- **Objetivo**: Derrube o adversário do cenário ou reduza a vida dele (barra verde) a zero usando explosões.
+
+## ✨ Recursos
+- **Física de Matter.js**: Colisões realistas e terreno destrutível.
+- **Sistema de Turnos**: Mecânica clássica de duelo estratégico.
+- **Gráficos procedurais**: Ovelhas e grama geradas por código para máxima performance.
