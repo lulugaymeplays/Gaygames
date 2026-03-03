@@ -30,9 +30,18 @@ export class MenuScene extends Phaser.Scene {
         const btnText = this.add.text(0, 0, 'START GAME', { font: '24px Orbitron', fill: '#ffffff' }).setOrigin(0.5);
         startBtn.add([btnBg, btnText]);
 
-        btnBg.on('pointerover', () => btnBg.setFillStyle(0xff5722));
-        btnBg.on('pointerout', () => btnBg.setFillStyle(0xff3e00));
-        btnBg.on('pointerup', () => this.scene.start('GameScene'));
+        btnBg.on('pointerover', () => {
+            btnBg.setFillStyle(0xff5722);
+            this.tweens.add({ targets: startBtn, scale: 1.1, duration: 200, ease: 'Back.easeOut' });
+        });
+        btnBg.on('pointerout', () => {
+            btnBg.setFillStyle(0xff3e00);
+            this.tweens.add({ targets: startBtn, scale: 1.0, duration: 200, ease: 'Back.easeOut' });
+        });
+        btnBg.on('pointerup', () => {
+            this.cameras.main.fade(500, 0, 0, 0);
+            this.time.delayedCall(500, () => this.scene.start('GameScene'));
+        });
 
         this.add.text(width / 2, 550, 'Zerar a vida dele ou jogue-o do terreno para vencer!', {
             font: '16px Outfit',

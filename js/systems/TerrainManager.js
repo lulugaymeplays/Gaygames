@@ -10,20 +10,26 @@ export class TerrainManager {
         const height = this.scene.cameras.main.height;
         const groundLevel = height - 120;
 
-        // Generate a solid base first
+        // Optimized terrain generation (only generate surface and a few layers)
         for (let x = 0; x < width; x += this.blockSize) {
-            // Sinusoidal hills
-            const h = Math.sin(x * 0.01) * 60 + groundLevel;
+            // Natural rolling hills using multiple sine waves
+            const h1 = Math.sin(x * 0.005) * 60;
+            const h2 = Math.sin(x * 0.02) * 20;
+            const h = h1 + h2 + groundLevel;
 
+            // Create a small platform for players at spawn locations (optional, here just random)
             for (let y = h; y < height; y += this.blockSize) {
                 const block = this.scene.matter.add.image(x + this.blockSize / 2, y + this.blockSize / 2, 'ground', null, {
                     isStatic: true,
                     label: 'terrain',
-                    friction: 0.8,
+                    friction: 0.9,
                     restitution: 0
                 });
                 block.setDisplaySize(this.blockSize, this.blockSize);
                 this.blocks.push(block);
+
+                // PERFORMANCE: Only generate down to 100px past ground level to keep object count low
+                if (y > h + 150) break;
             }
         }
     }

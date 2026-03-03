@@ -25,7 +25,7 @@ export class Player extends Phaser.GameObjects.Container {
             shape: 'rectangle',
             width: 32,
             height: 28,
-            friction: 0.2, // Some friction to stop sliding
+            friction: 0.05,
             restitution: 0,
             label: 'player'
         });
