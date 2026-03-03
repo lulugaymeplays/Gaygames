@@ -7,19 +7,14 @@ export class Player extends Phaser.GameObjects.Container {
         this.hp = 100;
         this.isActive = false;
 
-        // Visuals
         this.bodySprite = scene.add.sprite(0, 0, 'sheep').setTint(color);
         this.add(this.bodySprite);
-
-        // Face different directions based on team
         if (team % 2 === 1) this.bodySprite.setFlipX(true);
 
-        // HP Bar
         this.hpBar = scene.add.graphics();
         this.updateHPBar();
         this.add(this.hpBar);
 
-        // Physics
         scene.add.existing(this);
         this.physicsBody = scene.matter.add.gameObject(this, {
             shape: 'rectangle',
@@ -29,9 +24,8 @@ export class Player extends Phaser.GameObjects.Container {
             restitution: 0.1,
             label: 'player'
         });
-        this.physicsBody.setFixedRotation(); // Sheep don't roll like balls
+        this.physicsBody.setFixedRotation();
 
-        // Slingshot variables
         this.isDragging = false;
         this.dragStart = new Phaser.Math.Vector2();
         this.trajectoryLine = scene.add.graphics();
@@ -41,24 +35,17 @@ export class Player extends Phaser.GameObjects.Container {
 
     setupInteraction() {
         this.bodySprite.setInteractive({ useHandCursor: true });
-
         this.bodySprite.on('pointerdown', (pointer) => {
             if (!this.isActive) return;
             this.isDragging = true;
             this.dragStart.set(pointer.x, pointer.y);
             this.scene.cameras.main.startFollow(this, true, 0.1, 0.1);
         });
-
         this.scene.input.on('pointermove', (pointer) => {
-            if (this.isDragging) {
-                this.updateTrajectory(pointer);
-            }
+            if (this.isDragging) this.updateTrajectory(pointer);
         });
-
         this.scene.input.on('pointerup', (pointer) => {
-            if (this.isDragging) {
-                this.shoot(pointer);
-            }
+            if (this.isDragging) this.shoot(pointer);
         });
     }
 
@@ -72,31 +59,22 @@ export class Player extends Phaser.GameObjects.Container {
 
     updateTrajectory(pointer) {
         this.trajectoryLine.clear();
-
         const dx = this.dragStart.x - pointer.x;
         const dy = this.dragStart.y - pointer.y;
-
-        // Draw power line
         this.trajectoryLine.lineStyle(2, 0xffffff, 0.3);
         this.trajectoryLine.beginPath();
         this.trajectoryLine.moveTo(0, 0);
         this.trajectoryLine.lineTo(-dx, -dy);
         this.trajectoryLine.strokePath();
 
-        // Parabola prediction
         this.trajectoryLine.lineStyle(3, this.color, 0.8);
-        let tx = 0;
-        let ty = 0;
-        let vx = dx * 0.15;
-        let vy = dy * 0.15;
+        let tx = 0, ty = 0;
+        let vx = dx * 0.15, vy = dy * 0.15;
         const gravity = this.scene.matter.world.localWorld.gravity.y * 0.1;
-
         this.trajectoryLine.beginPath();
         this.trajectoryLine.moveTo(tx, ty);
         for (let i = 0; i < 30; i++) {
-            tx += vx;
-            ty += vy;
-            vy += gravity;
+            tx += vx; ty += vy; vy += gravity;
             this.trajectoryLine.lineTo(tx, ty);
         }
         this.trajectoryLine.strokePath();
@@ -106,15 +84,11 @@ export class Player extends Phaser.GameObjects.Container {
         if (!this.isDragging) return;
         this.isDragging = false;
         this.trajectoryLine.clear();
-
         const dx = this.dragStart.x - pointer.x;
         const dy = this.dragStart.y - pointer.y;
         const power = 0.15;
-
         this.scene.launchProjectile(this.x, this.y, dx * power, dy * power);
         this.scene.endTurn();
-
-        // Bounce back effect
         this.physicsBody.applyForce({ x: -dx * 0.0001, y: -dy * 0.0001 });
     }
 
@@ -122,18 +96,12 @@ export class Player extends Phaser.GameObjects.Container {
         this.hp -= amount;
         if (this.hp < 0) this.hp = 0;
         this.updateHPBar();
-
-        // Flash Red
         this.bodySprite.setTint(0xff0000);
         this.scene.time.delayedCall(200, () => this.bodySprite.setTint(this.color));
-
-        if (this.hp === 0) {
-            this.die();
-        }
+        if (this.hp === 0) this.die();
     }
 
     die() {
-        // Explosion at death
         this.scene.handleExplosion(this.x, this.y);
         this.scene.matter.world.remove(this.body);
         this.destroy();

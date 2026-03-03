@@ -1,30 +1,24 @@
-# Slingshot Mayhem - Web Game
+# Sheep Mayhem
 
-## Como Rodar Localmente
-1. Abra a pasta `Gaygames` em seu editor (VS Code, etc).
-2. Use uma extensão como o "Live Server" ou rode `npx serve .` no terminal.
-3. Acesse `http://localhost:5000` (ou a porta indicada).
+Jogo de duelo entre ovelhas com física destrutível.
 
-## Como Deployar para o GitHub
-Como você solicitou o uso da pasta `C:\Users\luiza.castro_uscsonl\Documents\Gaygames`, siga estes passos:
-1. Mova todos os arquivos e pastas gerados aqui para `C:\Users\luiza.castro_uscsonl\Documents\Gaygames`.
-2. Abra o **GitHub Desktop**.
-3. Selecione o repositório `Gaygames`.
-4. Você verá as mudanças. Escreva um resumo como "Initial game implementation" e clique em **Commit to main**.
-5. Clique em **Push origin**.
-6. No GitHub (site), vá em **Settings > Pages** e ative o deploy a partir da branch `main`.
+## Como Jogar
 
-## Funcionalidades Implementadas
-- **Física de Corpos Rígidos**: Usando Matter.js via Phaser 3.
-- **Terreno Destrutível**: Explosões que removem partes do solo.
-- **Combate por Turnos**: Timer de 15s e troca automática de jogadores.
-- **Sistema de Estilingue**: Arraste os personagens para atirar pedras com previsão de trajetória.
-- **Multijogador Local**: Configurado para 2 a 4 jogadores.
+Como o jogo utiliza módulos JavaScript modernos, ele precisa ser servido por um servidor local para funcionar corretamente no seu navegador. Escolha um dos métodos abaixo:
 
-## Estrutura do Código
-- `index.html`: Entrada principal.
-- `style.css`: Estilo premium dark.
-- `js/main.js`: Configuração do motor.
-- `js/scenes/`: Lógica das telas (Boot, Menu, Game).
-- `js/entities/`: Comportamento dos jogadores.
-- `js/systems/`: Gerenciamento de terreno e regras.
+### Opção A: Usando Node.js (Recomendado)
+Se você tem Node.js instalado, abra o terminal na pasta do jogo e execute:
+`npx serve .`
+Depois, abra `http://localhost:3000` no seu navegador.
+
+### Opção B: Usando Python
+Se você tem Python instalado, execute:
+`python -m http.server 8000`
+Depois, abra `http://localhost:8000` no seu navegador.
+
+### Opção C: Extensão do VS Code
+Se você usa VS Code, instale a extensão "Live Server", clique com o botão direito no `index.html` e selecione "Open with Live Server".
+
+## Controles
+- **Mouse**: Clique e arraste na sua ovelha (como um estilingue) para mirar e solte para atirar uma bola de lã.
+- O objetivo é zerar a vida da outra ovelha ou derrubá-la do terreno.

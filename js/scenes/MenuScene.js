@@ -9,7 +9,6 @@ export class MenuScene extends Phaser.Scene {
 
         this.add.image(width / 2, height / 2, 'sky').setDisplaySize(width, height).setAlpha(0.6);
 
-        // Title
         this.add.text(width / 2, 100, 'SHEEP MAYHEM', {
             font: '72px Orbitron',
             fill: '#ffffff',
@@ -17,7 +16,6 @@ export class MenuScene extends Phaser.Scene {
             strokeThickness: 8
         }).setOrigin(0.5);
 
-        // Settings
         this.add.text(width / 2, 220, 'PLAYER COUNT', { font: '20px Orbitron', fill: '#00d4ff' }).setOrigin(0.5);
 
         const countText = this.add.text(width / 2, 260, this.game.settings.playerCount, {
@@ -39,7 +37,6 @@ export class MenuScene extends Phaser.Scene {
             }
         });
 
-        // Start Button
         this.createButton(width / 2, 400, 'START GAME', () => {
             this.scene.start('GameScene');
         });
@@ -58,18 +55,12 @@ export class MenuScene extends Phaser.Scene {
 
     createButton(x, y, label, callback) {
         const btn = this.add.container(x, y);
-
         const bg = this.add.rectangle(0, 0, 240, 60, 0xff3e00)
             .setInteractive({ useHandCursor: true })
             .on('pointerover', () => bg.setFillStyle(0xff5722))
             .on('pointerout', () => bg.setFillStyle(0xff3e00))
             .on('pointerdown', callback);
-
-        const text = this.add.text(0, 0, label, {
-            font: '24px Orbitron',
-            fill: '#ffffff'
-        }).setOrigin(0.5);
-
+        const text = this.add.text(0, 0, label, { font: '24px Orbitron', fill: '#ffffff' }).setOrigin(0.5);
         btn.add([bg, text]);
         return btn;
     }

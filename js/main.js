@@ -12,7 +12,7 @@ const config = {
         default: 'matter',
         matter: {
             gravity: { y: 1 },
-            debug: false, // Set to true to see hitboxes
+            debug: false,
             enableSleeping: true
         }
     },
@@ -23,7 +23,6 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// Globally available settings
 game.settings = {
     playerCount: 2,
     charsPerTeam: 2,
