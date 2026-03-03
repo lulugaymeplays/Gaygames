@@ -10,75 +10,39 @@ export class GameScene extends Phaser.Scene {
         this.width = this.cameras.main.width;
         this.height = this.cameras.main.height;
 
-        // Procedural background just in case assets fail
+        // Background
         const bg = this.add.graphics();
-        bg.fillGradientStyle(0x050510, 0x050510, 0x000000, 0x000000, 1);
+        bg.fillGradientStyle(0x0a0a20, 0x0a0a20, 0x000000, 0x000000, 1);
         bg.fillRect(0, 0, this.width, this.height);
 
-        // Try to add sky image if it exists
-        if (this.textures.exists('sky')) {
-            this.add.image(this.width / 2, this.height / 2, 'sky').setDisplaySize(this.width, this.height).setAlpha(0.2);
-        }
-
-        // Systems
+        // Terrain
         this.terrain = new TerrainManager(this);
         this.terrain.generate();
 
-        // Game State
-        this.players = [];
-        this.currentPlayerIndex = -1; // Set to -1 so first call starts at 0
-        this.turnTimer = 15;
-        this.isTurnActive = false;
-        this.gameOver = false;
-
-        this.setupMultiplayer();
+        // HUD
         this.setupHUD();
+
+        // Game State
+        this.gameOver = false;
+        const colors = [0x00d4ff, 0xff3e00]; // P1: Blue, P2: Red
+
+        // Spawn players
+        this.players = [];
+        this.players.push(new Player(this, 100, 100, 0, colors[0]));
+        this.players.push(new Player(this, this.width - 100, 100, 1, colors[1]));
+
+        // Physics
         this.setupPhysics();
-
-        // Small delay to ensure everything is ready
-        this.time.delayedCall(500, () => {
-            this.startNextTurn();
-        });
-    }
-
-    setupMultiplayer() {
-        const colors = [0xff3e00, 0x00d4ff, 0xffcc00, 0x00ff00];
-        const numPlayers = this.game.settings.playerCount || 2;
-
-        for (let i = 0; i < numPlayers; i++) {
-            const startX = 150 + (this.width - 300) * (i / (numPlayers - 1));
-            // Ensure they drop from high enough to land on terrain
-            const player = new Player(this, startX, 50, i, colors[i]);
-            this.players.push(player);
-        }
     }
 
     setupHUD() {
-        this.hudText = this.add.text(this.width / 2, 40, 'WAITING...', {
+        this.hudText = this.add.text(this.width / 2, 40, 'SHEEP BRAWL', {
             font: '32px Orbitron',
-            fill: '#ffffff',
-            stroke: '#000',
-            strokeThickness: 4
-        }).setOrigin(0.5).setScrollFactor(0);
+            fill: '#ffffff'
+        }).setOrigin(0.5);
 
-        this.timerText = this.add.text(this.width - 60, 40, '15s', {
-            font: '32px Orbitron',
-            fill: '#ff3e00',
-            stroke: '#000',
-            strokeThickness: 4
-        }).setOrigin(0.5).setScrollFactor(0);
-
-        this.time.addEvent({
-            delay: 1000,
-            callback: () => {
-                if (this.isTurnActive && !this.gameOver) {
-                    this.turnTimer--;
-                    this.timerText.setText(this.turnTimer + 's');
-                    if (this.turnTimer <= 0) this.endTurn();
-                }
-            },
-            loop: true
-        });
+        this.add.text(20, 20, 'P1: WASD + SPACE', { font: '16px Orbitron', fill: '#00d4ff' });
+        this.add.text(this.width - 180, 20, 'P2: ARROWS + 0', { font: '16px Orbitron', fill: '#ff3e00' });
     }
 
     setupPhysics() {
@@ -86,136 +50,85 @@ export class GameScene extends Phaser.Scene {
             event.pairs.forEach(pair => {
                 const bodyA = pair.bodyA;
                 const bodyB = pair.bodyB;
-                const labelA = bodyA.label;
-                const labelB = bodyB.label;
 
-                if (labelA === 'projectile' || labelB === 'projectile') {
-                    const proj = labelA === 'projectile' ? bodyA.gameObject : bodyB.gameObject;
+                if (bodyA.label === 'projectile' || bodyB.label === 'projectile') {
+                    const proj = bodyA.label === 'projectile' ? bodyA.gameObject : bodyB.gameObject;
                     if (proj && proj.active) {
-                        this.handleExplosion(proj.x, proj.y);
-                        proj.destroy(); // Destroy immediately on hit
+                        this.handleExplosion(proj.x, proj.y, 40);
+                        proj.destroy();
                     }
                 }
             });
         });
     }
 
-    startNextTurn() {
-        if (this.gameOver) return;
-
-        // Increment index
-        this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-
-        // Find next living player
-        let safety = 0;
-        let activePlayer = this.players[this.currentPlayerIndex];
-
-        while ((!activePlayer || !activePlayer.active) && safety < this.players.length) {
-            this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
-            activePlayer = this.players[this.currentPlayerIndex];
-            safety++;
-        }
-
-        if (safety >= this.players.length) {
-            // No one left?
-            return;
-        }
-
-        this.players.forEach(p => { if (p && p.active) p.isActive = false; });
-
-        activePlayer.isActive = true;
-        this.isTurnActive = true;
-        this.turnTimer = 15;
-        this.timerText.setText('15s');
-
-        this.hudText.setText(`PLAYER ${this.currentPlayerIndex + 1} TURN`)
-            .setFill('#' + activePlayer.color.toString(16).padStart(6, '0'));
-
-        // Camera follow active player briefly
-        this.cameras.main.startFollow(activePlayer, true, 0.1, 0.1);
-    }
-
-    endTurn() {
-        if (!this.isTurnActive) return;
-        this.isTurnActive = false;
-
-        this.time.delayedCall(2000, () => {
-            this.startNextTurn();
-        });
-    }
-
-    launchProjectile(x, y, vx, vy) {
+    launchProjectile(x, y, vx, vy, ownerId) {
         if (this.gameOver) return;
 
         const projectile = this.matter.add.image(x, y, 'wool-ball', null, {
             shape: 'circle',
-            radius: 8,
+            radius: 6,
             label: 'projectile',
-            friction: 0.01,
-            restitution: 0.4
+            friction: 0.1,
+            restitution: 0.8
         });
+
         projectile.setVelocity(vx, vy);
+        projectile.setTint(ownerId === 0 ? 0x00d4ff : 0xff3e00);
 
-        this.time.addEvent({
-            delay: 10000,
-            callback: () => { if (projectile && projectile.active) projectile.destroy(); }
+        // Auto-terminate
+        this.time.delayedCall(5000, () => {
+            if (projectile.active) projectile.destroy();
         });
-
-        this.cameras.main.startFollow(projectile, true, 0.1, 0.1);
     }
 
-    handleExplosion(x, y) {
-        const radius = 70;
+    handleExplosion(x, y, radius) {
         this.terrain.explode(x, y, radius);
-        this.cameras.main.shake(300, 0.01);
+        this.cameras.main.shake(100, 0.005);
 
         this.players.forEach(p => {
-            if (p && p.active) {
+            if (p.alive) {
                 const dist = Phaser.Math.Distance.Between(x, y, p.x, p.y);
                 if (dist < radius) {
-                    const damage = Math.round(60 * (1 - dist / radius));
+                    const damage = Math.round(30 * (1 - dist / radius));
                     p.takeDamage(damage);
                     const angle = Phaser.Math.Angle.Between(x, y, p.x, p.y);
-                    p.applyForce({ x: Math.cos(angle) * 0.02, y: Math.sin(angle) * 0.02 });
+                    p.physicsBody.applyForce({ x: Math.cos(angle) * 0.005, y: Math.sin(angle) * 0.005 });
                 }
             }
         });
 
-        // Dust effect
+        // Dust
         const emitter = this.add.particles(x, y, 'particle', {
-            speed: { min: 30, max: 180 },
-            scale: { start: 1, end: 0 },
-            lifespan: 1000,
-            quantity: 20,
-            tint: 0xcccccc,
-            blendMode: 'NORMAL'
+            speed: { min: 20, max: 120 },
+            scale: { start: 0.6, end: 0 },
+            lifespan: 500,
+            quantity: 10,
+            tint: 0xffffff
         });
-        this.time.delayedCall(1000, () => { if (emitter) emitter.destroy(); });
+        this.time.delayedCall(500, () => emitter.destroy());
     }
 
     update() {
         if (this.gameOver) return;
 
-        const alivePlayers = this.players.filter(p => p && p.active);
+        // Manual update for players (platforming logic)
+        this.players.forEach(p => p.update());
 
-        if (alivePlayers.length <= 1 && this.players.length > 1) {
+        // Victory condition
+        const survivors = this.players.filter(p => p.alive);
+        if (survivors.length <= 1) {
             this.gameOver = true;
-            const winner = alivePlayers[0];
-            const resultText = winner ? `PLAYER ${this.players.indexOf(winner) + 1} WINS!` : "GAME OVER";
+            const winnerId = (survivors.length === 1) ? survivors[0].id + 1 : 0;
+            const resultMsg = (winnerId > 0) ? `PLAYER ${winnerId} WINS!` : "DRAAAW!";
 
-            this.add.text(this.width / 2, this.height / 2, resultText, {
-                font: '84px Orbitron',
-                fill: '#ffffff',
-                stroke: '#00d4ff',
-                strokeThickness: 10
-            }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-
-            this.isTurnActive = false;
-            this.time.delayedCall(5000, () => this.scene.start('MenuScene'));
+            this.hudText.setText(resultMsg).setScale(2).setFill('#ffffff');
+            this.time.delayedCall(3000, () => this.scene.start('MenuScene'));
         }
 
+        // Fall check
         this.players.forEach(p => {
-            if (p && p.active && p.y > this.height + 200) {
+            if (p.alive && p.y > this.height + 100) {
                 p.die();
             }
         });

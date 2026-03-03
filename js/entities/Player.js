@@ -1,52 +1,111 @@
 export class Player extends Phaser.GameObjects.Container {
-    constructor(scene, x, y, team, color) {
+    constructor(scene, x, y, id, color) {
         super(scene, x, y);
         this.scene = scene;
-        this.team = team;
+        this.id = id; // 0 for P1, 1 for P2
         this.color = color;
         this.hp = 100;
-        this.isActive = false;
+        this.alive = true;
+        this.lastShotTime = 0;
+        this.shootDelay = 400; // ms
 
+        // Visuals
         this.bodySprite = scene.add.sprite(0, 0, 'sheep').setTint(color);
         this.add(this.bodySprite);
-        if (team % 2 === 1) this.bodySprite.setFlipX(true);
+        if (id === 1) this.bodySprite.setFlipX(true);
 
+        // HP Bar
         this.hpBar = scene.add.graphics();
         this.updateHPBar();
         this.add(this.hpBar);
 
+        // Physics (Matter.js)
         scene.add.existing(this);
         this.physicsBody = scene.matter.add.gameObject(this, {
             shape: 'rectangle',
-            width: 40,
-            height: 32,
-            friction: 0.8,
-            restitution: 0.1,
+            width: 32,
+            height: 28,
+            friction: 0.2, // Some friction to stop sliding
+            restitution: 0,
             label: 'player'
         });
         this.physicsBody.setFixedRotation();
 
-        this.isDragging = false;
-        this.dragStart = new Phaser.Math.Vector2();
-        this.trajectoryLine = scene.add.graphics();
-
-        this.setupInteraction();
+        // Inputs
+        this.setupControls();
     }
 
-    setupInteraction() {
-        this.bodySprite.setInteractive({ useHandCursor: true });
-        this.bodySprite.on('pointerdown', (pointer) => {
-            if (!this.isActive) return;
-            this.isDragging = true;
-            this.dragStart.set(pointer.x, pointer.y);
-            this.scene.cameras.main.startFollow(this, true, 0.1, 0.1);
-        });
-        this.scene.input.on('pointermove', (pointer) => {
-            if (this.isDragging) this.updateTrajectory(pointer);
-        });
-        this.scene.input.on('pointerup', (pointer) => {
-            if (this.isDragging) this.shoot(pointer);
-        });
+    setupControls() {
+        const { W, A, D, SPACE } = Phaser.Input.Keyboard.KeyCodes;
+        const { UP, LEFT, RIGHT, ZERO, NUMPAD_ZERO } = Phaser.Input.Keyboard.KeyCodes;
+
+        if (this.id === 0) {
+            // Player 1: WASD + Space
+            this.keys = this.scene.input.keyboard.addKeys({
+                jump: W,
+                left: A,
+                right: D,
+                shoot: SPACE
+            });
+        } else {
+            // Player 2: Arrows + 0 (both top row and numpad)
+            this.keys = this.scene.input.keyboard.addKeys({
+                jump: UP,
+                left: LEFT,
+                right: RIGHT,
+                shoot: ZERO,
+                num0: NUMPAD_ZERO
+            });
+        }
+    }
+
+    update() {
+        if (!this.alive) return;
+
+        const moveSpeed = 4;
+        const jumpForce = -7;
+
+        // Horizontal movement
+        if (this.keys.left.isDown) {
+            this.physicsBody.setVelocityX(-moveSpeed);
+            this.bodySprite.setFlipX(true);
+        } else if (this.keys.right.isDown) {
+            this.physicsBody.setVelocityX(moveSpeed);
+            this.bodySprite.setFlipX(false);
+        } else {
+            this.physicsBody.setVelocityX(0);
+        }
+
+        // Jump (only if near ground level for simplicity)
+        if (Phaser.Input.Keyboard.JustDown(this.keys.jump)) {
+            // Check vertical velocity is low enough (grounded)
+            if (Math.abs(this.physicsBody.body.velocity.y) < 0.2) {
+                this.physicsBody.setVelocityY(jumpForce);
+            }
+        }
+
+        // Shoot
+        let shooting = this.keys.shoot.isDown;
+        if (this.id === 1 && this.keys.num0.isDown) shooting = true;
+
+        if (shooting) {
+            this.shoot();
+        }
+    }
+
+    shoot() {
+        const now = this.scene.time.now;
+        if (now - this.lastShotTime < this.shootDelay) return;
+        this.lastShotTime = now;
+
+        const direction = this.bodySprite.flipX ? -1 : 1;
+        const startX = this.x + (direction * 25);
+        const startY = this.y - 5;
+
+        const vx = direction * 12;
+        const vy = -3; // Slight upward arc
+
+        this.scene.launchProjectile(startX, startY, vx, vy, this.id);
     }
 
     updateHPBar() {
@@ -57,53 +116,29 @@ export class Player extends Phaser.GameObjects.Container {
         this.hpBar.fillRect(-20, -35, 40 * (this.hp / 100), 6);
     }
 
-    updateTrajectory(pointer) {
-        this.trajectoryLine.clear();
-        const dx = this.dragStart.x - pointer.x;
-        const dy = this.dragStart.y - pointer.y;
-        this.trajectoryLine.lineStyle(2, 0xffffff, 0.3);
-        this.trajectoryLine.beginPath();
-        this.trajectoryLine.moveTo(0, 0);
-        this.trajectoryLine.lineTo(-dx, -dy);
-        this.trajectoryLine.strokePath();
-
-        this.trajectoryLine.lineStyle(3, this.color, 0.8);
-        let tx = 0, ty = 0;
-        let vx = dx * 0.15, vy = dy * 0.15;
-        const gravity = this.scene.matter.world.localWorld.gravity.y * 0.1;
-        this.trajectoryLine.beginPath();
-        this.trajectoryLine.moveTo(tx, ty);
-        for (let i = 0; i < 30; i++) {
-            tx += vx; ty += vy; vy += gravity;
-            this.trajectoryLine.lineTo(tx, ty);
-        }
-        this.trajectoryLine.strokePath();
-    }
-
-    shoot(pointer) {
-        if (!this.isDragging) return;
-        this.isDragging = false;
-        this.trajectoryLine.clear();
-        const dx = this.dragStart.x - pointer.x;
-        const dy = this.dragStart.y - pointer.y;
-        const power = 0.15;
-        this.scene.launchProjectile(this.x, this.y, dx * power, dy * power);
-        this.scene.endTurn();
-        this.physicsBody.applyForce({ x: -dx * 0.0001, y: -dy * 0.0001 });
-    }
-
     takeDamage(amount) {
+        if (!this.alive) return;
         this.hp -= amount;
         if (this.hp < 0) this.hp = 0;
         this.updateHPBar();
+
+        // Red flash feedback
         this.bodySprite.setTint(0xff0000);
-        this.scene.time.delayedCall(200, () => this.bodySprite.setTint(this.color));
-        if (this.hp === 0) this.die();
+        this.scene.time.delayedCall(150, () => {
+            if (this.alive) this.bodySprite.setTint(this.color);
+        });
+
+        if (this.hp <= 0) {
+            this.die();
+        }
     }
 
     die() {
-        this.scene.handleExplosion(this.x, this.y);
-        this.scene.matter.world.remove(this.body);
-        this.destroy();
+        if (!this.alive) return;
+        this.alive = false;
+        this.scene.handleExplosion(this.x, this.y, 50);
+        this.setVisible(false);
+        this.physicsBody.setStatic(true);
+        this.active = false;
     }
 }
